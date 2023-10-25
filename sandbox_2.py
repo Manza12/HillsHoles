@@ -5,24 +5,28 @@ import time
 
 # Parameters
 from plot import plot_spectrogram
-from synthesis import am_fm_component
+from synthesis import am_fm_component, am_tm_component
 
 EPS = 1e-10
-FS = 48000
+FS = 10000
 TIME_RESOLUTION = 0.001  # seconds
-FREQUENCY_RESOLUTION = 5  # Hz
-WINDOW_DURATION = 0.1  # seconds
-WINDOW_SPREAD = 0.01  # seconds
+FREQUENCY_RESOLUTION = 1  # Hz
+WINDOW_SPREAD = 0.047  # seconds
+WINDOW_DURATION = WINDOW_SPREAD * 10  # seconds
 
 NFFT = int(FS/FREQUENCY_RESOLUTION)
 NPERSEG = int(FS*WINDOW_DURATION)
 HOP_SIZE = int(FS*TIME_RESOLUTION)
 NOVERLAP = NPERSEG - HOP_SIZE
-SIGMA = WINDOW_SPREAD * FS
+SIGMA = WINDOW_SPREAD * FS / np.sqrt(2 * np.pi)
 
 # Generate a signal
-xi_0 = 1000  # Hz
-xi_1 = 1200  # Hz
+xi_0 = 2500  # Hz
+xi_1 = 1500  # Hz
+tau_0 = 2.5  # seconds
+tau_1 = 0.050  # seconds
+a_1 = 0.0
+a_2 = 0.0
 t_0 = 0.2  # seconds
 t_1 = 4.8  # seconds
 
@@ -33,10 +37,11 @@ t_1 = 4.8  # seconds
 # plot_signal(smoothing, fs=FS)
 
 duration = 5.  # seconds
-volume = 0.2  # no unit
-noise_amplitude = 0.0001  # no unit
+volume = 0.01  # no unit
+noise_amplitude = 0.0000  # no unit
 
 t = np.linspace(0, duration, int(duration*FS), endpoint=False)
+xi = np.linspace(0, FS/2, NFFT, endpoint=False)
 
 idx = np.logical_and(t_0 < t, t < t_1)
 # a = np.zeros_like(t)
@@ -45,21 +50,29 @@ idx = np.logical_and(t_0 < t, t < t_1)
 # plot_signals([a, a_smoothed], fs=FS)
 t_center = (t_0 + t_1) / 2
 t_spread = (t_1 - t_0) / 12
+xi_center = (xi_0 + xi_1) / 2
+xi_spread = (xi_1 - xi_0) / 12
 
-a = np.exp(-(t-t_center)**2/(2*t_spread**2))
+a_t = np.exp(-(t-t_center)**2/(2*t_spread**2))
+a_xi = np.exp(-(xi-xi_center)**2/(2*xi_spread**2))
 
 # xi = np.zeros_like(t)
 # xi[idx] = xi_0 + (xi_1 - xi_0) * (t[idx] - t_0) / (t_1 - t_0)
-f_1 = (xi_0 + xi_1) / 2 + (xi_1 - xi_0) * np.sin(2 * np.pi * 1 * t)
-f_2 = (xi_0 + 2*xi_1) / 2 + (2*xi_1 - xi_0) * np.cos(2 * np.pi * 1 * t)
+f_1 = xi_0 + a_1 * xi_1 * np.sin(2 * np.pi * 1 * t)
+# f_2 = xi_0 + a_2 * xi_1 * np.cos(2 * np.pi * 1 * t)
+tau_2 = tau_0 + a_2 * tau_1 * np.cos(2 * np.pi * 1 * xi)
 
-s_1 = am_fm_component(a, f_1, FS)
-s_2 = am_fm_component(a, f_2, FS)
+s_1 = am_fm_component(a_t, f_1, FS)
+s_2 = am_tm_component(a_xi, tau_2, FS)
 # plot_signal(s, fs=FS)
 
 w = noise_amplitude * np.random.randn(len(t))
-x = s_1 + s_2 + w
-x *= volume / np.max(np.abs(x))
+
+x = w
+x += s_1
+L = min(len(s_2), len(x) - int(tau_0*FS))
+x[int(tau_0*FS): int(tau_0*FS)+L] += s_2[:L]
+x *= volume  # / np.max(np.abs(x))
 
 # STFT
 start = time.time()
@@ -70,7 +83,7 @@ end = time.time()
 print('Time to compute spectrogram: %.3f seconds' % (end-start))
 
 # Write to file
-wav.write('signal.wav', FS, x.astype(np.float32))
+wav.write('signal_2.wav', FS, x.astype(np.float32))
 
 # Plot
 plot_spectrogram(S, tau, omega, vmin=20 * np.log10(EPS), show=True)
