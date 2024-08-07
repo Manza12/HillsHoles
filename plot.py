@@ -57,13 +57,13 @@ def plot_signals(signals: List[np.ndarray], t=None, fs=None, show=False):
         plt.show()
 
 
-def plot_spectrogram(S, tau, omega, ax=None, title=None, vmax=0, vmin=-100, show=False):
+def plot_spectrogram(S, tau, omega, ax=None, title=None, vmax=0, vmin=-100, aspect='auto', show=False):
     if ax is None:
         fig, ax = plt.subplots()
     if title is None:
         title = 'Spectrogram'
 
-    plt.imshow(S, cmap='afmhot', vmin=vmin, vmax=vmax, aspect='auto', origin='lower')
+    plt.imshow(S, cmap='afmhot', vmin=vmin, vmax=vmax, aspect=aspect, origin='lower')
 
     # Format axes
     ax.yaxis.set_major_formatter(tick.FuncFormatter(lambda x, pos: format_freq(x, pos, omega)))
