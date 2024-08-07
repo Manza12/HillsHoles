@@ -2,11 +2,10 @@ import scipy.signal as sig
 import scipy.io.wavfile as wav
 import numpy as np
 import time
-
-# Parameters
 from plot import plot_spectrogram
 from synthesis import am_fm_component
 
+# Parameters
 EPS = 1e-10
 FS = 48000
 TIME_RESOLUTION = 0.001  # seconds
