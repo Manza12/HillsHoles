@@ -78,3 +78,5 @@ def plot_spectrogram(S, tau, omega, ax=None, title=None, vmax=0, vmin=-100, show
 
     if show:
         plt.show()
+
+    return ax
